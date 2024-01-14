@@ -1,0 +1,9 @@
+data:
+  path: C:\Users\Justin\Documents\Machine Learning\Nuclear_Segmentation # files must be called x_train, x_test, y_train, y_test in the data path
+  file_type: .npy
+  img: nucleus # choices for this option include "nucleus", "actin" or "all"
+
+model:
+  name: small # names are small, mobilenet and autoencoder
+  output: classification # choices are classification or regression - if autoencoder, this value does not matter
+
