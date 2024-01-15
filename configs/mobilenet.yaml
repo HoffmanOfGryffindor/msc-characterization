@@ -5,7 +5,7 @@ data:
   num_classes: 5
 
 model:
-  name: small # names are small, mobilenet and autoencoder
+  name: mobilenet # names are small, mobilenet and autoencoder
   output: classification # choices are classification or regression - if autoencoder, this value does not matter
   filter_dim: [3, 3]
   epochs: 20

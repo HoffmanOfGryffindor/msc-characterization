@@ -3,27 +3,27 @@ from tensorflow import keras
 from tensorflow.keras import layers, Model
 
 class Encoder(keras.Model):
-    def __init__(self, latent_dim=2, data_dim=(3,3), filter_dim=(3,3)):
+    def __init__(self, config: dict, shape: list):
         super(Encoder, self).__init__()
-        self.latent_dim = latent_dim
-        self.data_dim = data_dim
-        self.filter_dim = filter_dim
+        self.latent_dim = config['model']['latent_dim']
+        self.data_dim = tuple(shape)
+        self.filter_dim = tuple(config['model']['filter_dim'])
         self.encoder = keras.Sequential([
-            keras.Input(shape=(96, 96, 1)),
+            keras.Input(shape=self.data_dim),
             layers.Conv2D(32, 3, activation="relu", strides=2, padding="same"),
             layers.Conv2D(64, 3, activation="relu", strides=2, padding="same"),
             layers.Flatten(),
             layers.Dense(2000, activation="relu"),
         ])
-        self.z_mean = layers.Dense(latent_dim, name="z_mean")
-        self.z_log_var = layers.Dense(latent_dim, name="z_log_var")
+        self.z_mean = layers.Dense(self.latent_dim, name="z_mean")
+        self.z_log_var = layers.Dense(self.latent_dim, name="z_log_var")
         # self.z = Sampling()
 
     def call(self, x):
         x = self.encoder(x)
         z_mean = self.z_mean(x)
         z_log_var = self.z_log_var(x)
-        return self.sampling([z_mean, z_log_var])
+        return z_mean, z_log_var, self.sampling([z_mean, z_log_var])
     
     def sampling(self, inputs):
         z_mean, z_log_var = inputs
@@ -33,13 +33,11 @@ class Encoder(keras.Model):
         return z_mean + tf.exp(0.5 * z_log_var) * epsilon
 
 class Decoder(keras.Model):
-    def __init__(self, latent_dim=2, data_dim=(3,3), filter_dim=(3,3)):
+    def __init__(self, config: dict):
         super(Decoder, self).__init__()
-        self.latent_dim = latent_dim
-        self.data_dim = data_dim
-        self.filter_dim = filter_dim
-        self.Decoder = keras.Sequential([
-            keras.Input(shape=(latent_dim,)),
+        self.latent_dim = config['model']['latent_dim']
+        self.decoder = keras.Sequential([
+            keras.Input(shape=(self.latent_dim,)),
             layers.Dense(36864, activation="relu"),
             layers.Reshape((24, 24, 64)),
             layers.Conv2DTranspose(64, 3, activation="relu", strides=2, padding="same"),
@@ -48,15 +46,15 @@ class Decoder(keras.Model):
         ])
 
     def call(self, x):
-        x = self.encoder(x)
+        x = self.decoder(x)
         return x
 
 
 class VariationalAutoencoder(keras.Model):
-    def __init__(self, encoder: keras.Model, decoder: keras.Model):
+    def __init__(self, config: dict, shape: list):
         super().__init__()
-        self.encoder = encoder
-        self.decoder = decoder
+        self.encoder = Encoder(config, shape)
+        self.decoder = Decoder(config)
         self.total_loss_tracker = keras.metrics.Mean(name="total_loss")
         self.reconstruction_loss_tracker = keras.metrics.Mean(
             name="reconstruction_loss"
