@@ -11,3 +11,10 @@ model:
   epochs: 20
   batch_size: 64
 
+labels:
+  control: 0
+  contrl: 0
+  6h: 6
+  24h: 24
+  48h: 48
+  72h: 72
