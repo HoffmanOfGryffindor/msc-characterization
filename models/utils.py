@@ -17,6 +17,7 @@ class ModelTrainer:
         :config: dictionary of key values for traininig
         """
         super().__init__()
+        self.leaf_size = 14
         self.img = config["data"]["img"]
         self.data_path = config["data"]["path"]
         self.file_type = config["data"]["file_type"]

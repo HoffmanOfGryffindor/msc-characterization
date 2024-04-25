@@ -3,3 +3,5 @@ tensorflow
 scikit-plot
 numpy
 pyyaml
+readlif # segmentation
+mahotas

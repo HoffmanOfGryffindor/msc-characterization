@@ -1,0 +1,19 @@
+H3K9me3_Actin: ["brightfield", "h3k9me3", "actin", "hoechst"]
+H3K27me3: ["brightfield", "hoechst", "h3k27me3"]
+Lipid_droplet_Nile_Red: ["brightfield", "hoechst", "nile_red"]
+
+exceptions:
+  MSC_14h_adipo_PH_Hoechst_Nilered_040821:
+    ["brightfield", "nile_red", "hoechst"]
+  MSC_24h_adipo_PH_H3K9488_Hoechst_Rhopha_expo85_040121:
+    ["brightfield", "h3k9me3", "hoechst", "actin"]
+
+labels:
+  control: 0
+  contrl: 0
+  6h: 6
+  24h: 24
+  48h: 48
+  72h: 72
+  14h: 14
+  5d: 120
