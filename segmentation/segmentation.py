@@ -6,6 +6,7 @@ import mahotas
 import yaml
 from sklearn.model_selection import train_test_split
 from readlif.reader import LifFile
+from math import floor, ceil
 
 class ImageSegmenter:
     def __init__(self, blur_sigma=0.5):
@@ -16,6 +17,14 @@ class ImageSegmenter:
             config = yaml.safe_load(file)
         
         self.config = config
+
+    def __call__(self, directory: str, save: bool = True):
+        print("-"*5 + "Reading LIF Files" + "-"*5)
+        images = self.read_lifs(directory=directory)
+        print("-"*5 + "Extracting Nuceli" + "-"*5)
+        data = self.get_nucleus(images)
+        print("-"*5 + "Saving Nuclei to Files" + "-"*5)
+        self.save_imagery(data)
 
     # converts 16 bit images into 8 bit grayscale images
     def convert_grayscale(self, img):
@@ -74,7 +83,7 @@ class ImageSegmenter:
     def find_contours(self, image) -> np.ndarray:
 
         image = scipy.ndimage.gaussian_filter(image, sigma=self.sigma)
-        _, thresh = cv2.threshold(src=image, dst=np.copy(image), thresh=100, maxval=255, type=cv2.THRESH_BINARY)
+        _, thresh = cv2.threshold(src=image, dst=np.copy(image), thresh=50, maxval=255, type=cv2.THRESH_BINARY)
         contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_TC89_L1)
         
         return contours
@@ -128,27 +137,48 @@ class ImageSegmenter:
         return nuclei
     
     def augment_imagery(self, data: dict):
-        images = np.array([np.dstack((x['nuclei'], x['actin'], x['brightfield'])) for x in data])
+        max_dim = self.find_largest_dim(data)
+        images = np.array([self.condense_imagery(x['nucleus'], x['actin'], x['brightfield'], max_dim) for x in data])
         labels = np.array([x['time'] for x in data])
 
         x_train, x_test, y_train, y_test = train_test_split(images, labels)
         x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=0.25)
+        sets = map(self.rotate_images, [x_train, x_val, x_test], [y_train, y_val, y_test])
+        
+        return list(sets)
+    
+    def rotate_images(self, images: np.ndarray, labels: np.ndarray):
+        for img, label in zip(images, labels):
+            for _ in range(3):
+                img = np.rot90(img)
+                images = np.append(images, img[None, ...], axis=0)
+                labels = np.append(labels, label)
 
-        for idx, x in enumerate([(x_train, y_train), (x_val, y_val), (x_test, y_test)]):
-            for img, label in zip(x):
-                for _ in range(3):
-                    img = np.rot90(img)
+        return (images, labels)
+    
+    def pad_image(self, image: np.ndarray, max_dim: int):
+        img_h, img_w = image.shape
+        w_pad = [int((max_dim-img_w)/2)] * 2 if (max_dim-img_w)/2 % 2 == 0 else [floor((max_dim-img_w)/2), ceil((max_dim-img_w)/2)]
+        h_pad = [int((max_dim-img_h)/2)] * 2 if (max_dim-img_h)/2 % 2 == 0 else [floor((max_dim-img_h)/2), ceil((max_dim-img_h)/2)]
+        return np.pad(image, (h_pad, w_pad), "constant")
 
+    def condense_imagery(self, nucleus: np.ndarray, actin: np.ndarray, bright: np.ndarray, max_dim: int):
+        nucleus, actin, bright = map(self.pad_image, [nucleus, actin, bright], [max_dim]*3)
+        return np.dstack((nucleus, actin, bright))
 
+    def find_largest_dim(self, nuclei: dict):
+        max_dim = 0
+        for x in nuclei:
+            *_, w, h = x['bbox']
+            if max_dim < w: max_dim = w
+            if max_dim < h: max_dim = h
 
+        return max_dim
 
     def save_imagery(self, nuclei: dict) -> None:
-            data, labels = self.augment_imagery(nuclei)
-            # x_train, x_test, y_train, y_test = 
-            # for a, b in zip(
-            #     [x_train, x_test, y_train, y_test], 
-            #     ["./x_train.npy", "./x_test.npy", "./y_train.npy", "./y_test.npy"]
-            #     ):
-            #     with open(b, 'wb') as f:
-            #         np.save(f, a)
-            # f.close()
+        sets = self.augment_imagery(nuclei) # sets contains train, val, test images and labels
+        for (s, name) in zip(sets, ["train", "val", "test"]):
+            for data, data_type in zip(s, ['x','y']):
+                with open(f'{data_type}_{name}.npy', 'wb') as f:
+                    np.save(f, data)
+                f.close()

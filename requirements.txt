@@ -5,3 +5,4 @@ numpy
 pyyaml
 readlif # segmentation
 mahotas
+scipy==1.11.4

@@ -1,21 +1,12 @@
 data:
-  path:  # files must be called x_train, x_test, y_train, y_test in the data path
+  path: . # files must be called x_train, x_test, y_train, y_test in the data path
   file_type: .npy
-  img: nucleus # choices for this option include "nucleus", "actin" or "all"
+  img: brightfield # choices for this option include "nucleus", "actin", "brightfield" or "all"
   num_classes: 5
 
 model:
   name: mobilenet # names are small, mobilenet and autoencoder
   output: classification # choices are classification or regression - if autoencoder, this value does not matter
   filter_dim: [3, 3]
-  epochs: 20
+  epochs: 50
   batch_size: 64
-
-labels:
-  control: 0
-  contrl: 0
-  6h: 6
-  24h: 24
-  48h: 48
-  72h: 72
-

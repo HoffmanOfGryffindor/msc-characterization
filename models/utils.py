@@ -6,7 +6,7 @@ from tensorflow.keras import optimizers
 from sklearn.preprocessing import LabelEncoder
 from sklearn.utils import shuffle
 
-# from scikitplot.metrics import plot_confusion_matrix
+from scikitplot.metrics import plot_confusion_matrix
 
 
 class ModelTrainer:
@@ -47,16 +47,16 @@ class ModelTrainer:
         :return: dictionary containing data for x_train, y_train, x_test, y_test
         """
         data = {}
-        for file in ["x_train", "y_train", "x_test", "y_test"]:
+        for file in ["x_train", "y_train", "x_val", "y_val", "x_test", "y_test"]:
             data[file] = np.load(os.path.join(self.data_path, file + self.file_type))
 
-            if file in ["y_train", "y_test"]:
-                data[file] = self._string_to_int(data[file])
+            if file in ["y_train", "y_val", "y_test"]:
+                # data[file] = self._string_to_int(data[file])
 
                 if self.encoder:
                     data[file] = self.encoder.fit_transform(data[file])
 
-        for x, y in [("x_train", "y_train"), ("x_test", "y_test")]:
+        for x, y in [("x_train", "y_train"), ("x_val", "y_val"), ("x_test", "y_test")]:
             data[x], data[y] = shuffle(data[x], data[y])
 
         return data
@@ -69,6 +69,7 @@ class ModelTrainer:
         """
 
         for idx, label in enumerate(labels):
+            if isinstance(label, str): continue
             labels[idx] = self.label_map[label]
 
         return labels
@@ -77,18 +78,20 @@ class ModelTrainer:
         """ indicate whether the image is using nucleus, actin or both based on the channel it is stored in
         """
 
-        for x in ["x_train", "x_test"]:
+        for x in ["x_train", "x_val", "x_test"]:
             imgs = self.data[x]
 
             if self.img == "nucleus":
-                imgs = imgs[:, :, :, 0]
+                imgs = imgs[..., 0]
             elif self.img == "actin":
-                imgs = imgs[:, :, :, 1]
+                imgs = imgs[..., 1]
+            elif self.img == "brightfield":
+                imgs = imgs[..., 2]
             elif self.img == "all":
                 continue
             else:
                 raise Exception(
-                    'Not a recognizable image type, must be "nucleus", "actin" or "all"'
+                    'Not a recognizable image type, must be "nucleus", "actin", "brightfield", or "all"'
                 )
 
             imgs = imgs[:, :, :, np.newaxis]
@@ -106,7 +109,7 @@ class ModelTrainer:
             model.compile(optimizer=optimizers.Adam())
 
             full_data = np.concatenate(
-                (self.data["x_train"], self.data["x_test"]), axis=0
+                (self.data["x_train"], self.data["x_val"], self.data["x_test"]), axis=0
             )
             model.fit(full_data, epochs=self.epochs, batch_size=self.batch_size)
 
@@ -121,19 +124,23 @@ class ModelTrainer:
                 metrics=["accuracy"],
             )
 
-            model = model.fit(
+            _ = model.fit(
                 self.data["x_train"],
                 self.data["y_train"],
                 epochs=self.epochs,
                 batch_size=self.batch_size,
-                validation_data=(self.data["x_test"], self.data["y_test"]),
+                validation_data=(self.data["x_val"], self.data["y_val"]),
             )
+        
+            self.plt_confusion_matrix(model)
 
 
-# def plt_confusion_matrix(x, y, model, encoder, title, neural_network=True):
-#     predict = model.predict(x)
-#     if neural_network:
-#         highest_pred = np.argmax(predict, axis=1)
+    def plt_confusion_matrix(self, model):
+        predict = model.predict(self.data['x_test'])
+        highest_pred = np.argmax(predict, axis=1)
 
-#     cm = plot_confusion_matrix(encoder.inverse_transform(y), encoder.inverse_transform(highest_pred),title=title)
-#     plt.show()
+        truth = self.encoder.inverse_transform(self.data['y_test'])
+        predicted = self.encoder.inverse_transform(highest_pred)
+
+        _ = plot_confusion_matrix(truth, predicted, title=f"{self.img} {self.model_name}")
+        plt.savefig(f"{self.img}_{self.model_name}.png")
