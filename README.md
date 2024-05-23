@@ -2,7 +2,7 @@
 
 ### The repository contains all the code necessary to reproduce the results in the paper
 
-![alt text](https://github.com/HoffmanOfGryffindor/msc-characterization/tree/main/images/image1.png)
+![alt text](https://github.com/HoffmanOfGryffindor/msc-characterization/tree/main/images/image1.png "Diagram")
 
 ## Running a model
 
