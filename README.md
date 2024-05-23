@@ -1,8 +1,7 @@
 # Image-based discrimination of the early stages of mesenchymal stem cell differentiation
 
 ### The repository contains all the code necessary to reproduce the results in the paper
-
-![alt text](https://github.com/HoffmanOfGryffindor/msc-characterization/tree/main/images/image1.png "Diagram")
+![image1](https://github.com/HoffmanOfGryffindor/msc-characterization/assets/68908581/896e3d9e-a7e1-416e-a5a5-a429ab4a8ba4 "Diagram")
 
 ## Running a model
 
